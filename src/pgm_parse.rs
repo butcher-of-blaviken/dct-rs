@@ -46,6 +46,37 @@ impl Display for PGMImage {
 }
 
 impl PGMImage {
+    /// get_block returns the 8x8 block at the given block index.
+    /// For example, a 512x512 image will have 4,096 8x8 blocks in total.
+    pub fn get_block(&self, block_index: usize) -> Result<Vec<u8>, String> {
+        let num_blocks = self.width * self.height / 8*8;
+        if block_index >= num_blocks {
+            return Err(format!("out of bounds block index {}, max is {}", block_index, num_blocks));
+        }
+
+        // translate the block index into a starting index into image8
+        let start_index = self.translate_block_index_to_start_index(&block_index);
+        let mut ret = vec![0 as u8; 64];
+        let mut ret_idx: usize = 0;
+        // navigate the array to create the 8x8 block in column-major order.
+        for i in start_index..start_index+8 {
+            for j in 0..8 {
+                ret[ret_idx] = self.image8[i + self.width * j];
+                ret_idx += 8;
+                if ret_idx >= 64 {
+                    ret_idx = (ret_idx % 64) + 1;
+                }
+            }
+        }
+
+        Ok(ret)
+    }
+
+    fn translate_block_index_to_start_index(&self, block_index: &usize) -> usize {
+        // TODO: implement properly
+        *block_index * 8
+    }
+
     /// Parse the provided PGM file into a PGMFile structure, suitable
     /// for further processing.
     pub fn parse(pgm_file_path: &String) -> Result<Self, IOError> {
@@ -119,5 +150,34 @@ mod tests {
         assert_eq!(pgm_image.width, 512);
         assert_eq!(pgm_image.maxval, 255);
         assert_eq!(pgm_image.image8.len(), 512 * 512);
+    }
+
+    #[test]
+    fn test_get_block() {
+        let path = "./8by8_grayscale.pgm".to_string();
+        let pgm_image_result = PGMImage::parse(&path);
+        assert!(pgm_image_result.is_ok());
+        let pgm_image = pgm_image_result.unwrap();
+        let first_block_result = pgm_image.get_block(0);
+        assert!(first_block_result.is_ok());
+        let first_block = first_block_result.unwrap();
+        for (i, _) in pgm_image.image8.iter().enumerate() {
+            assert_eq!(first_block[i], pgm_image.image8[i], "testing at index {}", i);
+        }
+    }
+
+    #[test]
+    fn test_get_block_second_block_index() {
+        let path = "./16by16_grayscale.pgm".to_string();
+        let pgm_image_result = PGMImage::parse(&path);
+        assert!(pgm_image_result.is_ok());
+        let pgm_image = pgm_image_result.unwrap();
+        let second_block_result = pgm_image.get_block(1);
+        assert!(second_block_result.is_ok());
+        let second_block = second_block_result.unwrap();
+        println!("second block first row: {:?}", &second_block[0..8]);
+        println!("second block first row from image: {:?}", &pgm_image.image8[8..16]);
+        println!("second block second row: {:?}", &second_block[8..16]);
+        println!("second block second row from image: {:?}", &pgm_image.image8[24..32]);
     }
 }
