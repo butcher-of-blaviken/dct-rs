@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 
+mod pgm_parse;
 
 /// A user has an uncompressed grayscale image (e.g., 512x512 pixels, each pixel value 0-255)
 /// and needs to compress it to reduce file size while maintaining reasonable visual quality.
@@ -35,19 +36,23 @@ enum Commands {
     /// Decompresses a DCT compressed image.
     Decompress {
         /// Path to the image file to decompress. It must be a PGM file.
-        path: String
+        path: String,
     },
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
 
     match &args.command {
         Commands::Compress { path, quality } => {
             println!("compressing image {} with quality {}...", path, quality);
-        },
+            let img = pgm_parse::PGMImage::parse(path)?;
+            println!("parsed image at path {}, details: {}", path, img);
+            Ok(())
+        }
         Commands::Decompress { path } => {
             println!("decompressing image {}...", path);
+            Ok(())
         }
     }
 }
