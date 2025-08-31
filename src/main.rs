@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 
+mod dct;
 mod pgm_parse;
 
 /// A user has an uncompressed grayscale image (e.g., 512x512 pixels, each pixel value 0-255)
