@@ -16,6 +16,9 @@ use std::f64::consts::PI;
 /// * g(x, y) is the pixel value at coordinates (x, y)
 /// * G(u, v) is the DCT coefficient at coordinates (u, v)
 pub fn dct_block(width: usize, height: usize, block: &Vec<u8>) -> Vec<f64> {
+    const BLOCK_SIZE: usize = 8;
+    debug_assert!(width == BLOCK_SIZE && height == BLOCK_SIZE);
+
     let shifted = level_shift_block(&block);
     let mut dct = vec![0.0; shifted.len()];
 
@@ -27,10 +30,10 @@ pub fn dct_block(width: usize, height: usize, block: &Vec<u8>) -> Vec<f64> {
                 for y in 0 as usize..height {
                     let cos_x = (((2 * x + 1) as f64) * (i as f64) * PI / 16.0).cos();
                     let cos_y = (((2 * y + 1) as f64) * (j as f64) * PI / 16.0).cos();
-                    sum += shifted[8 * x + y] * cos_x * cos_y;
+                    sum += shifted[BLOCK_SIZE * x + y] * cos_x * cos_y;
                 }
             }
-            dct[8 * i + j] = preamble * sum;
+            dct[BLOCK_SIZE * i + j] = preamble * sum;
         }
     }
 
