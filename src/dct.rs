@@ -1,5 +1,19 @@
-use crate::consts::BLOCK_SIZE_8X8;
+use crate::{consts::BLOCK_SIZE_8X8, pgm_parse::PGMImage};
 use std::f64::consts::PI;
+
+/// dct calculates the DCT image from the given PGM image using 8x8 blocks.
+pub fn dct(img: &PGMImage) -> Result<Vec<Vec<f64>>, String> {
+    let num_blocks = img.num_blocks(BLOCK_SIZE_8X8);
+    let mut ret = vec![];
+    for block_index in 0..num_blocks {
+        ret.push(dct_block(
+            BLOCK_SIZE_8X8,
+            BLOCK_SIZE_8X8,
+            &img.get_block(BLOCK_SIZE_8X8, block_index)?,
+        ));
+    }
+    Ok(ret)
+}
 
 /// dct_block performs the 2D DCT algorithm on the given 8x8 block.
 /// Suppose g is the original block.

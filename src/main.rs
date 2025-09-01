@@ -49,7 +49,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Compress { path, quality } => {
             println!("compressing image {} with quality {}...", path, quality);
             let img = pgm_parse::PGMImage::parse(path)?;
-            println!("parsed image at path {}, details: {}", path, img);
+            println!(
+                "parsed image at path {}, details: {}, now calculating DCT image",
+                path, img
+            );
+            let dct = dct::dct(&img).unwrap();
+            println!(
+                "calculated dct of image, first few elements: {:?}",
+                &dct[0][0..8]
+            );
             Ok(())
         }
         Commands::Decompress { path } => {
