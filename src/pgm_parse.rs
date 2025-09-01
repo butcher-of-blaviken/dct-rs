@@ -49,15 +49,15 @@ impl Display for PGMImage {
 
 impl PGMImage {
     /// num_blocks returns the number of 8x8 blocks in this image.
-    pub fn num_blocks(&self) -> usize {
-        self.width * self.height / (BLOCK_SIZE_8X8 * BLOCK_SIZE_8X8)
+    pub fn num_blocks(&self, block_size: usize) -> usize {
+        self.width * self.height / (block_size * block_size)
     }
 
     /// get_block returns the 8x8 block at the given block index.
     /// For example, a 512x512 image will have 4,096 8x8 blocks in total.
-    pub fn get_block(&self, block_index: usize) -> Result<Vec<u8>, String> {
-        const NUM_PIXELS_8X8: usize = BLOCK_SIZE_8X8 * BLOCK_SIZE_8X8;
-        let num_blocks = (self.width * self.height) / (BLOCK_SIZE_8X8 * BLOCK_SIZE_8X8);
+    pub fn get_block(&self, block_size: usize, block_index: usize) -> Result<Vec<u8>, String> {
+        let num_pixels: usize = block_size * block_size;
+        let num_blocks = (self.width * self.height) / (block_size * block_size);
         if block_index >= num_blocks {
             return Err(format!(
                 "out of bounds block index {}, max is {}",
@@ -66,17 +66,17 @@ impl PGMImage {
         }
 
         // translate the block index into a starting index into image8
-        let start_index = self.translate_index(block_index);
-        let mut ret = vec![0 as u8; NUM_PIXELS_8X8];
+        let start_index = self.translate_index(block_size, block_index);
+        let mut ret = vec![0 as u8; num_pixels];
         let mut ret_idx: usize = 0;
         // navigate the array to create the 8x8 block in column-major order.
         // TODO: there a way to do this in row-major order instead for consistency?
         for i in start_index..start_index + 8 {
             for j in 0..8 {
                 ret[ret_idx] = self.image_u8[i + self.width * j];
-                ret_idx += BLOCK_SIZE_8X8;
-                if ret_idx >= NUM_PIXELS_8X8 {
-                    ret_idx = (ret_idx % NUM_PIXELS_8X8) + 1;
+                ret_idx += block_size;
+                if ret_idx >= num_pixels {
+                    ret_idx = (ret_idx % num_pixels) + 1;
                 }
             }
         }
@@ -84,15 +84,15 @@ impl PGMImage {
         Ok(ret)
     }
 
-    fn translate_index(&self, block_index: usize) -> usize {
-        let col_idx = block_index % (self.width / BLOCK_SIZE_8X8);
-        let row_idx = block_index / (self.height / BLOCK_SIZE_8X8);
+    fn translate_index(&self, block_size: usize, block_index: usize) -> usize {
+        let col_idx = block_index % (self.width / block_size);
+        let row_idx = block_index / (self.height / block_size);
         let row_addend = if row_idx >= 1 {
             (row_idx + 1) * self.width
         } else {
             0
         };
-        let col_addend = col_idx * BLOCK_SIZE_8X8;
+        let col_addend = col_idx * block_size;
         row_addend + col_addend
     }
 
@@ -157,7 +157,7 @@ impl PGMImage {
 }
 
 mod tests {
-    use crate::pgm_parse::PGMImage;
+    use crate::{consts::BLOCK_SIZE_8X8, pgm_parse::PGMImage};
 
     #[test]
     fn test_parse_pgm() {
@@ -177,7 +177,7 @@ mod tests {
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
-        let first_block_result = pgm_image.get_block(0);
+        let first_block_result = pgm_image.get_block(BLOCK_SIZE_8X8, 0);
         assert!(first_block_result.is_ok());
         let first_block = first_block_result.unwrap();
         for (i, _) in pgm_image.image_u8.iter().enumerate() {
@@ -195,7 +195,7 @@ mod tests {
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
-        let second_block_result = pgm_image.get_block(1);
+        let second_block_result = pgm_image.get_block(BLOCK_SIZE_8X8, 1);
         assert!(second_block_result.is_ok());
         let second_block = second_block_result.unwrap();
         assert_eq!(&second_block[0..8], &pgm_image.image_u8[8..16]);
@@ -210,7 +210,7 @@ mod tests {
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
-        let third_block_result = pgm_image.get_block(2);
+        let third_block_result = pgm_image.get_block(BLOCK_SIZE_8X8, 2);
         assert!(third_block_result.is_ok());
         let third_block = third_block_result.unwrap();
         assert_eq!(&third_block[0..8], &pgm_image.image_u8[32..40]);
@@ -225,7 +225,7 @@ mod tests {
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
-        assert_eq!(pgm_image.num_blocks(), (16 * 16) / (8 * 8));
+        assert_eq!(pgm_image.num_blocks(BLOCK_SIZE_8X8), (16 * 16) / (8 * 8));
     }
 
     #[test]
@@ -235,10 +235,10 @@ mod tests {
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
 
-        assert_eq!(pgm_image.translate_index(0), 0);
-        assert_eq!(pgm_image.translate_index(1), 8);
-        assert_eq!(pgm_image.translate_index(2), 32);
-        assert_eq!(pgm_image.translate_index(3), 40);
+        assert_eq!(pgm_image.translate_index(BLOCK_SIZE_8X8, 0), 0);
+        assert_eq!(pgm_image.translate_index(BLOCK_SIZE_8X8, 1), 8);
+        assert_eq!(pgm_image.translate_index(BLOCK_SIZE_8X8, 2), 32);
+        assert_eq!(pgm_image.translate_index(BLOCK_SIZE_8X8, 3), 40);
     }
 
     #[test]
@@ -248,12 +248,12 @@ mod tests {
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
 
-        assert_eq!(pgm_image.translate_index(0), 0);
-        assert_eq!(pgm_image.translate_index(1), 8);
-        assert_eq!(pgm_image.translate_index(2), 16);
-        assert_eq!(pgm_image.translate_index(3), 24);
+        assert_eq!(pgm_image.translate_index(BLOCK_SIZE_8X8, 0), 0);
+        assert_eq!(pgm_image.translate_index(BLOCK_SIZE_8X8, 1), 8);
+        assert_eq!(pgm_image.translate_index(BLOCK_SIZE_8X8, 2), 16);
+        assert_eq!(pgm_image.translate_index(BLOCK_SIZE_8X8, 3), 24);
 
-        assert_eq!(pgm_image.translate_index(8), 128);
-        assert_eq!(pgm_image.translate_index(16), 192);
+        assert_eq!(pgm_image.translate_index(BLOCK_SIZE_8X8, 8), 128);
+        assert_eq!(pgm_image.translate_index(BLOCK_SIZE_8X8, 16), 192);
     }
 }
