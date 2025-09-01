@@ -16,6 +16,8 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error as IOError, ErrorKind, Read};
 
+use crate::consts::BLOCK_SIZE_8X8;
+
 pub struct PGMImage {
     /// The width, formatted as ASCII characters in decimal.
     pub width: usize,
@@ -29,7 +31,7 @@ pub struct PGMImage {
     /// Each gray value is a number from 0 through Maxval, with 0 being black and Maxval
     /// being white.
     /// NOTE: only supports maxval of 255.
-    pub image8: Vec<u8>,
+    pub image_u8: Vec<u8>,
 }
 
 impl Display for PGMImage {
@@ -40,41 +42,43 @@ impl Display for PGMImage {
             self.width,
             self.height,
             self.maxval,
-            self.image8.len()
+            self.image_u8.len()
         )
     }
 }
 
 impl PGMImage {
+    /// num_blocks returns the number of 8x8 blocks in this image.
+    pub fn num_blocks(&self) -> usize {
+        self.width * self.height / (BLOCK_SIZE_8X8 * BLOCK_SIZE_8X8)
+    }
+
     /// get_block returns the 8x8 block at the given block index.
     /// For example, a 512x512 image will have 4,096 8x8 blocks in total.
     pub fn get_block(&self, block_index: usize) -> Result<Vec<u8>, String> {
-        let num_blocks = self.width * self.height / 8*8;
+        const NUM_PIXELS_8X8: usize = BLOCK_SIZE_8X8 * BLOCK_SIZE_8X8;
+        let num_blocks = self.width * self.height / BLOCK_SIZE_8X8*BLOCK_SIZE_8X8;
         if block_index >= num_blocks {
             return Err(format!("out of bounds block index {}, max is {}", block_index, num_blocks));
         }
 
         // translate the block index into a starting index into image8
-        let start_index = self.translate_block_index_to_start_index(&block_index);
-        let mut ret = vec![0 as u8; 64];
+        let start_index = block_index * BLOCK_SIZE_8X8;
+        let mut ret = vec![0 as u8; NUM_PIXELS_8X8];
         let mut ret_idx: usize = 0;
         // navigate the array to create the 8x8 block in column-major order.
+        // TODO: there a way to do this in row-major order instead for consistency?
         for i in start_index..start_index+8 {
             for j in 0..8 {
-                ret[ret_idx] = self.image8[i + self.width * j];
-                ret_idx += 8;
-                if ret_idx >= 64 {
-                    ret_idx = (ret_idx % 64) + 1;
+                ret[ret_idx] = self.image_u8[i + self.width * j];
+                ret_idx += BLOCK_SIZE_8X8;
+                if ret_idx >= NUM_PIXELS_8X8 {
+                    ret_idx = (ret_idx % NUM_PIXELS_8X8) + 1;
                 }
             }
         }
 
         Ok(ret)
-    }
-
-    fn translate_block_index_to_start_index(&self, block_index: &usize) -> usize {
-        // TODO: implement properly
-        *block_index * 8
     }
 
     /// Parse the provided PGM file into a PGMFile structure, suitable
@@ -132,7 +136,7 @@ impl PGMImage {
             width: width,
             height: height,
             maxval: maxval,
-            image8: pixels,
+            image_u8: pixels,
         })
     }
 }
@@ -149,7 +153,7 @@ mod tests {
         assert_eq!(pgm_image.height, 512);
         assert_eq!(pgm_image.width, 512);
         assert_eq!(pgm_image.maxval, 255);
-        assert_eq!(pgm_image.image8.len(), 512 * 512);
+        assert_eq!(pgm_image.image_u8.len(), 512 * 512);
     }
 
     #[test]
@@ -161,8 +165,8 @@ mod tests {
         let first_block_result = pgm_image.get_block(0);
         assert!(first_block_result.is_ok());
         let first_block = first_block_result.unwrap();
-        for (i, _) in pgm_image.image8.iter().enumerate() {
-            assert_eq!(first_block[i], pgm_image.image8[i], "testing at index {}", i);
+        for (i, _) in pgm_image.image_u8.iter().enumerate() {
+            assert_eq!(first_block[i], pgm_image.image_u8[i], "testing at index {}", i);
         }
     }
 
@@ -175,9 +179,33 @@ mod tests {
         let second_block_result = pgm_image.get_block(1);
         assert!(second_block_result.is_ok());
         let second_block = second_block_result.unwrap();
-        println!("second block first row: {:?}", &second_block[0..8]);
-        println!("second block first row from image: {:?}", &pgm_image.image8[8..16]);
-        println!("second block second row: {:?}", &second_block[8..16]);
-        println!("second block second row from image: {:?}", &pgm_image.image8[24..32]);
+        assert_eq!(&second_block[0..8], &pgm_image.image_u8[8..16]);
+        assert_eq!(&second_block[8..16], &pgm_image.image_u8[24..32]);
+        assert_eq!(&second_block[16..24], &pgm_image.image_u8[40..48]);
+        assert_eq!(&second_block[24..32], &pgm_image.image_u8[56..64]);
+    }
+
+    #[test]
+    fn test_get_block_third_block_index() {
+        let path = "./16by16_grayscale.pgm".to_string();
+        let pgm_image_result = PGMImage::parse(&path);
+        assert!(pgm_image_result.is_ok());
+        let pgm_image = pgm_image_result.unwrap();
+        let third_block_result = pgm_image.get_block(2);
+        assert!(third_block_result.is_ok());
+        let third_block = third_block_result.unwrap();
+        assert_eq!(&third_block[0..8], &pgm_image.image_u8[8..16]);
+        assert_eq!(&third_block[8..16], &pgm_image.image_u8[24..32]);
+        assert_eq!(&third_block[16..24], &pgm_image.image_u8[40..48]);
+        assert_eq!(&third_block[24..32], &pgm_image.image_u8[56..64]);
+    }
+
+    #[test]
+    fn test_num_blocks() {
+        let path = "./16by16_grayscale.pgm".to_string();
+        let pgm_image_result = PGMImage::parse(&path);
+        assert!(pgm_image_result.is_ok());
+        let pgm_image = pgm_image_result.unwrap();
+        assert_eq!(pgm_image.num_blocks(), (16 * 16) / (8 * 8));
     }
 }

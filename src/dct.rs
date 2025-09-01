@@ -1,4 +1,5 @@
 use std::f64::consts::PI;
+use crate::consts::BLOCK_SIZE_8X8;
 
 /// dct_block performs the 2D DCT algorithm on the given 8x8 block.
 /// Suppose g is the original block.
@@ -16,8 +17,7 @@ use std::f64::consts::PI;
 /// * g(x, y) is the pixel value at coordinates (x, y)
 /// * G(u, v) is the DCT coefficient at coordinates (u, v)
 pub fn dct_block(width: usize, height: usize, block: &Vec<u8>) -> Vec<f64> {
-    const BLOCK_SIZE: usize = 8;
-    debug_assert!(width == BLOCK_SIZE && height == BLOCK_SIZE);
+    debug_assert!(width == BLOCK_SIZE_8X8 && height == BLOCK_SIZE_8X8);
 
     let shifted = level_shift_block(&block);
     let mut dct = vec![0.0; shifted.len()];
@@ -30,10 +30,10 @@ pub fn dct_block(width: usize, height: usize, block: &Vec<u8>) -> Vec<f64> {
                 for y in 0 as usize..height {
                     let cos_x = (((2 * x + 1) as f64) * (i as f64) * PI / 16.0).cos();
                     let cos_y = (((2 * y + 1) as f64) * (j as f64) * PI / 16.0).cos();
-                    sum += shifted[BLOCK_SIZE * x + y] * cos_x * cos_y;
+                    sum += shifted[BLOCK_SIZE_8X8 * x + y] * cos_x * cos_y;
                 }
             }
-            dct[BLOCK_SIZE * i + j] = preamble * sum;
+            dct[BLOCK_SIZE_8X8 * i + j] = preamble * sum;
         }
     }
 
@@ -73,9 +73,9 @@ mod tests {
         let pgm_image = pgm_image_result.unwrap();
         assert_eq!(pgm_image.height, 8);
         assert_eq!(pgm_image.width, 8);
-        let shifted_block = level_shift_block(&pgm_image.image8);
+        let shifted_block = level_shift_block(&pgm_image.image_u8);
         for (i, _) in shifted_block.iter().enumerate() {
-            assert_eq!(shifted_block[i], (pgm_image.image8[i] as f64) - 128.0)
+            assert_eq!(shifted_block[i], (pgm_image.image_u8[i] as f64) - 128.0)
         }
     }
 
@@ -87,7 +87,7 @@ mod tests {
         let pgm_image = pgm_image_result.unwrap();
         assert_eq!(pgm_image.height, 8);
         assert_eq!(pgm_image.width, 8);
-        let dct = dct_block(pgm_image.width, pgm_image.height, &pgm_image.image8);
+        let dct = dct_block(pgm_image.width, pgm_image.height, &pgm_image.image_u8);
         println!("first 8 elements: {:?}", &dct[0..8])
     }
 }
