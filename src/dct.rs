@@ -1,16 +1,30 @@
 use crate::{consts::BLOCK_SIZE_8X8, pgm_parse::PGMImage};
 use std::f64::consts::PI;
 
+/// The quantization table as defined by the JPEG standard.
+const QUANTIZATION_TABLE: [u8; 64] = [
+    16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55, 14, 13, 16, 24, 40, 57, 69, 56,
+    14, 17, 22, 29, 51, 87, 80, 62, 18, 22, 37, 56, 68, 109, 103, 77, 24, 35, 55, 64, 81, 104, 113,
+    92, 49, 64, 78, 87, 103, 121, 120, 101, 72, 92, 95, 98, 112, 100, 103, 99,
+];
+
 /// dct calculates the DCT image from the given PGM image using 8x8 blocks.
-pub fn dct(img: &PGMImage) -> Result<Vec<Vec<f64>>, String> {
+pub fn dct(img: &PGMImage) -> Result<Vec<Vec<i16>>, String> {
     let num_blocks = img.num_blocks(BLOCK_SIZE_8X8);
-    let mut ret = vec![];
+    let mut ret: Vec<Vec<i16>> = vec![];
     for block_index in 0..num_blocks {
-        ret.push(dct_block(
-            BLOCK_SIZE_8X8,
-            BLOCK_SIZE_8X8,
-            &img.get_block(BLOCK_SIZE_8X8, block_index)?,
-        ));
+        let quantized_dct = dct_block(
+                BLOCK_SIZE_8X8,
+                BLOCK_SIZE_8X8,
+                &img.get_block(BLOCK_SIZE_8X8, block_index)?,
+            )
+            .iter()
+            .enumerate()
+            .map(|(idx, num)| (*num / (QUANTIZATION_TABLE[idx] as f64)).floor() as i16)
+            .collect::<Vec<i16>>();
+        ret.push(
+            quantized_dct,
+        );
     }
     Ok(ret)
 }
