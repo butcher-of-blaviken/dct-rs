@@ -65,14 +65,19 @@ mod tests {
         pgm_parse::PGMImage,
     };
 
-    #[test]
-    fn test_level_shift_block() {
-        let path = "./8by8_grayscale.pgm".to_string();
+    fn create_8x8_pgm() -> PGMImage {
+        let path = "./testdata/8by8_grayscale.pgm".to_string();
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
         assert_eq!(pgm_image.height, 8);
         assert_eq!(pgm_image.width, 8);
+        pgm_image
+    }
+
+    #[test]
+    fn test_level_shift_block() {
+        let pgm_image = create_8x8_pgm();
         let shifted_block = level_shift_block(&pgm_image.image_u8);
         for (i, _) in shifted_block.iter().enumerate() {
             assert_eq!(shifted_block[i], (pgm_image.image_u8[i] as f64) - 128.0)
@@ -81,12 +86,7 @@ mod tests {
 
     #[test]
     fn test_dct_block() {
-        let path = "./8by8_grayscale.pgm".to_string();
-        let pgm_image_result = PGMImage::parse(&path);
-        assert!(pgm_image_result.is_ok());
-        let pgm_image = pgm_image_result.unwrap();
-        assert_eq!(pgm_image.height, 8);
-        assert_eq!(pgm_image.width, 8);
+        let pgm_image = create_8x8_pgm();
         let dct = dct_block(pgm_image.width, pgm_image.height, &pgm_image.image_u8);
         println!("first 8 elements: {:?}", &dct[0..8])
     }

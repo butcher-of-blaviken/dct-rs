@@ -16,8 +16,6 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error as IOError, ErrorKind, Read};
 
-use crate::consts::BLOCK_SIZE_8X8;
-
 pub struct PGMImage {
     /// The width, formatted as ASCII characters in decimal.
     pub width: usize,
@@ -161,7 +159,7 @@ mod tests {
 
     #[test]
     fn test_parse_pgm() {
-        let path = "./test.pgm".to_string();
+        let path = "./testdata/test.pgm".to_string();
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
@@ -173,7 +171,7 @@ mod tests {
 
     #[test]
     fn test_get_block() {
-        let path = "./8by8_grayscale.pgm".to_string();
+        let path = "./testdata/8by8_grayscale.pgm".to_string();
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
@@ -191,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_get_block_second_block_index() {
-        let path = "./16by16_grayscale.pgm".to_string();
+        let path = "./testdata/16by16_grayscale.pgm".to_string();
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
@@ -206,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_get_block_third_block_index() {
-        let path = "./16by16_grayscale.pgm".to_string();
+        let path = "./testdata/16by16_grayscale.pgm".to_string();
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
@@ -221,7 +219,7 @@ mod tests {
 
     #[test]
     fn test_num_blocks() {
-        let path = "./16by16_grayscale.pgm".to_string();
+        let path = "./testdata/16by16_grayscale.pgm".to_string();
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
@@ -230,7 +228,7 @@ mod tests {
 
     #[test]
     fn test_translate_index() {
-        let path = "./16by16_grayscale.pgm".to_string();
+        let path = "./testdata/16by16_grayscale.pgm".to_string();
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
@@ -243,7 +241,7 @@ mod tests {
 
     #[test]
     fn test_translate_index_64x64() {
-        let path = "./64x64_grayscale.pgm".to_string();
+        let path = "./testdata/64x64_grayscale.pgm".to_string();
         let pgm_image_result = PGMImage::parse(&path);
         assert!(pgm_image_result.is_ok());
         let pgm_image = pgm_image_result.unwrap();
