@@ -1,8 +1,8 @@
 use clap::{Parser, Subcommand};
 
+mod consts;
 mod dct;
 mod pgm_parse;
-mod consts;
 
 /// A user has an uncompressed grayscale image (e.g., 512x512 pixels, each pixel value 0-255)
 /// and needs to compress it to reduce file size while maintaining reasonable visual quality.

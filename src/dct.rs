@@ -1,5 +1,5 @@
-use std::f64::consts::PI;
 use crate::consts::BLOCK_SIZE_8X8;
+use std::f64::consts::PI;
 
 /// dct_block performs the 2D DCT algorithm on the given 8x8 block.
 /// Suppose g is the original block.
